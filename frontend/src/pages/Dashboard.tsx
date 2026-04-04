@@ -33,8 +33,8 @@ const item = {
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, moodEntries, burnoutScore }) => {
   const recentMoodEntry = moodEntries.length > 0 ? moodEntries[moodEntries.length - 1] : null;
-  const averageMood = moodEntries.length > 0 
-    ? Math.round(moodEntries.reduce((sum, entry) => sum + entry.score, 0) / moodEntries.length) 
+  const averageMood = moodEntries.length > 0
+    ? Math.round(moodEntries.reduce((sum, entry) => sum + entry.score, 0) / moodEntries.length)
     : 0;
 
   const getBurnoutCategory = (score: number) => {
@@ -53,7 +53,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, moodEntries, b
   ];
 
   return (
-    <motion.div 
+    <motion.div
       variants={container}
       initial="hidden"
       animate="show"
@@ -65,7 +65,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, moodEntries, b
           Welcome Back!
         </h1>
         <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">
-          Here's your wellness overview
+          Here is your personalized burnout dashboard
         </p>
       </motion.div>
 
@@ -85,11 +85,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, moodEntries, b
               </div>
               <Progress value={burnoutScore} className="h-3" />
               <p className="text-slate-600 dark:text-slate-400 text-sm">
-                {burnoutScore > 70 
+                {burnoutScore > 70
                   ? "You're experiencing high burnout. Consider taking a break and reaching out for support."
                   : burnoutScore > 40
-                  ? "You're showing some signs of burnout. It's a good time to adjust your routine."
-                  : "Great job! You're maintaining a healthy balance."}
+                    ? "You're showing some signs of burnout. It's a good time to adjust your routine."
+                    : "Great job! You're maintaining a healthy balance."}
               </p>
             </div>
 
@@ -134,7 +134,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, moodEntries, b
           <h3 className="text-xl font-bold text-slate-900 dark:text-white">Quick Actions</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {quickActions.map((action, idx) => (
-              <Card 
+              <Card
                 key={idx}
                 className="p-6 hover:shadow-lg transition-all cursor-pointer border-slate-200 dark:border-slate-800"
                 onClick={action.onClick}
@@ -166,11 +166,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, moodEntries, b
                 {burnoutScore > 70 ? "Important: Please Take Care" : "Stay On Track"}
               </h3>
               <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                {burnoutScore > 70 
+                {burnoutScore > 70
                   ? "Your burnout indicators are high. Consider scheduling one-on-one time with a counselor and prioritize rest. Your health comes first."
                   : burnoutScore > 40
-                  ? "Keep monitoring your mood and stress levels. Try incorporating regular breaks and relaxation techniques into your routine."
-                  : "Excellent work maintaining your balance! Continue with your current habits and remember to check in with yourself regularly."}
+                    ? "Keep monitoring your mood and stress levels. Try incorporating regular breaks and relaxation techniques into your routine."
+                    : "Excellent work maintaining your balance! Continue with your current habits and remember to check in with yourself regularly."}
               </p>
             </div>
           </div>
