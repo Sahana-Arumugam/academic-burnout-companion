@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:italic@400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", serif;
+  
+  --color-brand-50: #f0f4ff;
+  --color-brand-100: #e0e9ff;
+  --color-brand-200: #c1d3ff;
+  --color-brand-300: #92b1ff;
+  --color-brand-400: #5c85ff;
+  --color-brand-500: #3355ff;
+  --color-brand-600: #1a33ff;
+  
+  --color-soft-blue: #eef2ff;
+  --color-soft-purple: #f5f3ff;
+  --color-soft-rose: #fff1f2;
+  --color-soft-emerald: #ecfdf5;
+  --color-soft-amber: #fffbeb;
+}
+
+@layer base {
+  body {
+    @apply bg-[#F8FAFC] text-slate-900 antialiased selection:bg-brand-100 selection:text-brand-600 transition-colors duration-300;
+  }
+  
+  .dark body {
+    @apply bg-slate-950 text-slate-50;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
+  }
+}
+
+.glass-card {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm transition-colors duration-300;
+}
+
+.dark .glass-card {
+  @apply bg-slate-900/70 border-slate-800/50;
+}
+
+.premium-shadow {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04), 0 4px 10px -5px rgba(0, 0, 0, 0.02);
+}
+
+.subtle-gradient-blue {
+  background: linear-gradient(135deg, #f0f4ff 0%, #e0e9ff 100%);
+}
+
+.subtle-gradient-purple {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+}
+
+.subtle-gradient-rose {
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 dark:bg-slate-800 rounded-full hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors;
+}
+
+.dark .subtle-gradient-blue {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+.dark .subtle-gradient-purple {
+  background: linear-gradient(135deg, #2e1065 0%, #1e1b4b 100%);
+}
+
+.dark .subtle-gradient-rose {
+  background: linear-gradient(135deg, #4c0519 0%, #27272a 100%);
+}
