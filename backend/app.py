@@ -113,29 +113,22 @@ def health():
 
 @app.route("/trigger-recovery/<int:score>", methods=["GET", "OPTIONS"])
 def trigger_recovery(score: int):
-    """
-    Main endpoint called by the frontend after assessment completion.
-    Maps score → burnout category → salt state.
 
-    Score ranges (aligned with frontend thresholds):
-      > 70  → high_burnout
-      > 40  → moderate_burnout
-      else  → low_burnout
-    """
     # Handle CORS preflight
     if request.method == "OPTIONS":
         return jsonify({}), 200
 
+    # Validate score
     if not (0 <= score <= 100):
         return jsonify({"error": "Score must be between 0 and 100"}), 400
 
     # ── Determine category ───────────────────────────────────────────────────
     if score > 70:
-        state      = "high_burnout"
-        log_msg    = f"HIGH BURNOUT detected (score: {score})"
+        state = "high_burnout"
+        log_msg = f"HIGH BURNOUT detected (score: {score})"
         status_msg = "⚠️ High burnout detected — SaltStack automation triggered"
 
-        # Create high-alert sentinel file (Python-level, independent of Salt)
+        # Create alert file
         try:
             os.makedirs(os.path.dirname(ALERT_FILE), exist_ok=True)
             with open(ALERT_FILE, "w", encoding="utf-8") as f:
@@ -145,37 +138,38 @@ def trigger_recovery(score: int):
                     f"Time    : {datetime.datetime.now().isoformat()}\n"
                 )
         except Exception as e:
-            print(f"[ALERT FILE] Could not write: {e}")
+            print(f"[ALERT FILE ERROR] {e}")
 
     elif score > 40:
-        state      = "moderate_burnout"
-        log_msg    = f"MODERATE BURNOUT detected (score: {score})"
+        state = "moderate_burnout"
+        log_msg = f"MODERATE BURNOUT detected (score: {score})"
         status_msg = "🟡 Moderate burnout detected — Recovery plan triggered"
 
     else:
-        state      = "low_burnout"
-        log_msg    = f"LOW BURNOUT — healthy condition (score: {score})"
+        state = "low_burnout"
+        log_msg = f"LOW BURNOUT — healthy condition (score: {score})"
         status_msg = "✅ Healthy condition — Keep it up!"
 
+    # 🔥 REQUIRED FOR YOUR CHANGE CONTROL DEMO
     print(f"[REQUEST] score={score} → state={state}")
 
-    # ── Always write Python-level log (guaranteed) ───────────────────────────
+    # ── Write Python log ─────────────────────────────────────────────────────
     write_log(log_msg)
 
-    # ── Attempt SaltStack automation ─────────────────────────────────────────
+    # ── Run SaltStack ────────────────────────────────────────────────────────
     salt_result = run_salt_state(state)
 
-    # ── JSON Response ────────────────────────────────────────────────────────
+    # ── Final Response ───────────────────────────────────────────────────────
     return jsonify({
-        "status":         status_msg,
-        "score":          score,
-        "category":       state,
+        "status": status_msg,
+        "score": score,
+        "category": state,
         "salt_triggered": salt_result["salt_ran"],
-        "salt_output":    salt_result["output"] if salt_result["salt_ran"] else None,
-        "salt_error":     salt_result["error"]  if not salt_result["salt_ran"] else None,
-        "log_written":    True,
-        "log_file":       LOG_FILE,
-        "salt_dir":       SALT_STATES_DIR,
+        "salt_output": salt_result["output"] if salt_result["salt_ran"] else None,
+        "salt_error": salt_result["error"] if not salt_result["salt_ran"] else None,
+        "log_written": True,
+        "log_file": LOG_FILE,
+        "salt_dir": SALT_STATES_DIR
     })
 
 
