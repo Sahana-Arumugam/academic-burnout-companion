@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Button, Progress, Badge } from '../components/UI';
-import { Heart, Brain, TrendingUp, Zap, Calendar, ArrowRight, Sparkles } from 'lucide-react';
-import { motion } from 'motion/react';
-import { MoodEntry, AssessmentResult } from '../types';
+import { Heart, Brain, TrendingUp, Zap, Calendar, ArrowRight, Sparkles, History, AlertTriangle, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { MoodEntry, AssessmentResult, BurnoutHistoryRecord, BurnoutHistoryData } from '../types';
 import { cn } from '../lib/utils';
 
 interface DashboardProps {
@@ -20,9 +20,7 @@ const container = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
+    transition: { staggerChildren: 0.08 }
   }
 };
 
@@ -30,6 +28,203 @@ const item = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.23, 1, 0.32, 1] } }
 };
+
+// ── Burnout History Hook ──────────────────────────────────────────────────────
+
+function useBurnoutHistory() {
+  const [data, setData] = useState<BurnoutHistoryData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetch_ = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('http://127.0.0.1:5000/burnout-history');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json: BurnoutHistoryData = await res.json();
+      setData(json);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetch_(); }, []);
+  return { data, loading, error, refetch: fetch_ };
+}
+
+// ── Record Row ────────────────────────────────────────────────────────────────
+
+const typeConfig = {
+  HIGH: { label: 'High', icon: AlertTriangle, ring: 'border-rose-200 dark:border-rose-800/60', bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-600 dark:text-rose-400', badge: 'rose' as const },
+  MODERATE: { label: 'Moderate', icon: AlertCircle, ring: 'border-amber-200 dark:border-amber-800/60', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400', badge: 'amber' as const },
+  LOW: { label: 'Low', icon: CheckCircle, ring: 'border-emerald-200 dark:border-emerald-800/60', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', badge: 'emerald' as const },
+};
+
+function HistoryRow({ record, index }: { record: BurnoutHistoryRecord; index: number }) {
+  const cfg = typeConfig[record.type] ?? typeConfig.MODERATE;
+  const Icon = cfg.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -12 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.06, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+      className={cn(
+        'flex items-center gap-4 p-4 rounded-2xl border transition-all',
+        cfg.ring, cfg.bg
+      )}
+    >
+      {/* Icon */}
+      <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0', cfg.text, 'bg-white/70 dark:bg-slate-900/50')}>
+        <Icon className="w-4 h-4" />
+      </div>
+
+      {/* Main text */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant={cfg.badge} >{cfg.label} Burnout</Badge>
+          {record.score !== null && (
+            <span className={cn('text-xs font-black tabular-nums', cfg.text)}>
+              {record.score}%
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 truncate">
+          {record.time ?? 'Legacy entry — no timestamp'}
+        </p>
+      </div>
+
+      {/* Score pill on far right */}
+      {record.score !== null && (
+        <div className={cn('hidden sm:flex w-12 h-12 rounded-2xl items-center justify-center font-black text-sm tabular-nums flex-shrink-0', cfg.text, 'bg-white/70 dark:bg-slate-900/50')}>
+          {record.score}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ── History Panel ─────────────────────────────────────────────────────────────
+
+function BurnoutHistoryPanel() {
+  const { data, loading, error, refetch } = useBurnoutHistory();
+
+  return (
+    <Card className="p-8 space-y-6 border-slate-200 dark:border-slate-800">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+            <History className="w-5 h-5 text-indigo-500" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Burnout History</h3>
+            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">Last 5 records from logs</p>
+          </div>
+        </div>
+        <button
+          onClick={refetch}
+          disabled={loading}
+          className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40"
+          aria-label="Refresh history"
+        >
+          <RefreshCw className={cn('w-4 h-4 text-slate-400', loading && 'animate-spin')} />
+        </button>
+      </div>
+
+      {/* High burnout alert banner */}
+      <AnimatePresence>
+        {data && data.high_count > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800/60"
+          >
+            <AlertTriangle className="w-5 h-5 text-rose-500 flex-shrink-0" />
+            <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">
+              You had{' '}
+              <span className="font-black text-rose-600 dark:text-rose-400">
+                {data.high_count} high burnout event{data.high_count !== 1 ? 's' : ''}
+              </span>{' '}
+              in the last 7 days. Please prioritise rest.
+            </p>
+          </motion.div>
+        )}
+
+        {data && data.high_count === 0 && !loading && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/60"
+          >
+            <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+              No high burnout events in the last 7 days — great work!
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Record list */}
+      {loading && (
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="flex flex-col items-center gap-3 py-6 text-center">
+          <AlertCircle className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+          <p className="text-sm text-slate-400 dark:text-slate-500">
+            Could not load history — is the Flask backend running?
+          </p>
+          <button
+            onClick={refetch}
+            className="text-xs font-bold text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && data && (
+        <>
+          {data.recent.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <History className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+              <p className="text-sm text-slate-400 dark:text-slate-500">
+                No burnout records yet — complete an assessment to get started.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {data.recent.map((record, i) => (
+                <HistoryRow key={i} record={record} index={i} />
+              ))}
+            </div>
+          )}
+
+          {/* Footer stats */}
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              {data.total} total log {data.total === 1 ? 'entry' : 'entries'}
+            </p>
+            <p className="text-xs font-bold text-rose-500">
+              {data.high_count} high{data.high_count !== 1 ? ' events' : ' event'} this week
+            </p>
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+// ── Main Dashboard ────────────────────────────────────────────────────────────
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, moodEntries, burnoutScore }) => {
   const recentMoodEntry = moodEntries.length > 0 ? moodEntries[moodEntries.length - 1] : null;
@@ -152,6 +347,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, moodEntries, b
             ))}
           </div>
         </div>
+      </motion.div>
+
+      {/* ── Burnout History ── */}
+      <motion.div variants={item}>
+        <BurnoutHistoryPanel />
       </motion.div>
 
       {/* Recommendations */}

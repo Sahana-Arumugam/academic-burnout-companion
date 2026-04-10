@@ -18,6 +18,20 @@ export interface AssessmentResult {
   category: 'Low' | 'Moderate' | 'High' | 'Severe';
 }
 
+export interface BurnoutHistoryRecord {
+  type: 'HIGH' | 'MODERATE' | 'LOW';
+  score: number | null;
+  time: string | null;
+  has_score: boolean;
+}
+
+export interface BurnoutHistoryData {
+  recent: BurnoutHistoryRecord[];
+  high_count: number;
+  total: number;
+}
+
+
 export interface Suggestion {
   id: string;
   title: string;

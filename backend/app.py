@@ -186,6 +186,98 @@ def get_logs():
         return jsonify({"error": str(e)}), 500
 
 
+def parse_log_file() -> list:
+    """
+    Parse system.log and return a list of structured burnout records.
+
+    Handles two line formats:
+      Structured : [2026-04-04 14:36:57] HIGH BURNOUT detected (score: 80)
+      Bare legacy: HIGH BURNOUT detected
+    """
+    import re
+    records = []
+
+    STRUCTURED = re.compile(
+        r"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]\s+"
+        r"(HIGH|MODERATE|LOW)\s+BURNOUT.*?(?:\(score:\s*(\d+)\))?",
+        re.IGNORECASE,
+    )
+    BARE = re.compile(r"^(HIGH|MODERATE|LOW)\s+BURNOUT", re.IGNORECASE)
+
+    try:
+        with open(LOG_FILE, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        return []
+    except Exception as e:
+        print(f"[HISTORY] Could not read log: {e}")
+        return []
+
+    for raw in lines:
+        line = raw.strip()
+        if not line:
+            continue
+
+        m = STRUCTURED.match(line)
+        if m:
+            ts_str, btype, score_str = m.group(1), m.group(2).upper(), m.group(3)
+            records.append({
+                "type":      btype,
+                "score":     int(score_str) if score_str else None,
+                "time":      ts_str,
+                "has_score": score_str is not None,
+            })
+            continue
+
+        m = BARE.match(line)
+        if m:
+            records.append({
+                "type":      m.group(1).upper(),
+                "score":     None,
+                "time":      None,
+                "has_score": False,
+            })
+
+    return records
+
+
+@app.route("/burnout-history")
+def burnout_history():
+    """
+    Parse system.log and return:
+      recent     – last 5 burnout records (newest first)
+      high_count – HIGH events in the last 7 days
+      total      – total parsed records
+    """
+    records = parse_log_file()
+
+    # Show the 5 most-recent entries (newest first)
+    recent = list(reversed(records))[:5]
+
+    # Count HIGH events within the last 7 days
+    cutoff = datetime.datetime.now() - datetime.timedelta(days=7)
+    high_count = 0
+    for r in records:
+        if r["type"] == "HIGH":
+            if r["time"]:
+                try:
+                    ts = datetime.datetime.strptime(r["time"], "%Y-%m-%d %H:%M:%S")
+                    if ts >= cutoff:
+                        high_count += 1
+                except ValueError:
+                    pass
+            else:
+                high_count += 1          # legacy bare line — count it
+
+    return jsonify({
+        "recent":     recent,
+        "high_count": high_count,
+        "total":      len(records),
+    })
+
+
+
+
 # ── Entry Point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
